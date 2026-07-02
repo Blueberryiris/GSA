@@ -8,7 +8,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Apple%20Silicon-000000?logo=apple&logoColor=white)](#)
 [![Metal](https://img.shields.io/badge/GPU-Metal-blue?logo=apple&logoColor=white)](#)
 [![License: MIT](https://img.shields.io/badge/license-MIT-4fd6ff.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-4ade80)](#tests--benchmark)
+[![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-4ade80)](#tests)
 
 <img src="docs/hero.svg" alt="GSA Visualizer — before (shuffled) and after (sorted) via the live WebSocket protocol" width="100%">
 
@@ -25,17 +25,45 @@
 
 ## Benchmarks
 
-GSA vs. Rust's built-in `sort_unstable`, measured on this project's own hardware (Apple M4, `cargo bench`):
+GSA vs. Rust's built-in `sort_unstable`, measured on this project's own hardware (see [Benchmark Methodology](#benchmark-methodology) for exact conditions — this isn't a single cherry-picked run):
 
 ![GSA vs sort_unstable](docs/benchmark-vs-sort-unstable.svg)
 
-**3.7x faster at 100K elements, 5.15x at 1M, 6.51x at 5M** — a real, growing margin, not a one-off. The only soft spot is n=1,000 (0.48x), which is fixed dispatch/channel overhead around the sort call, not the algorithm — 24 microseconds in absolute terms.
+**On par at 1K/10K elements, 3.69x faster at 100K, 5.85x at 1M, 7.81x at 5M** — a real, growing margin, not a one-off. Numbers are the median of 7 timed iterations per size (after a discarded warm-up), on identical seeded input for both sorts.
 
 That speed came from measuring, not assuming. A direct sweep of GSA's own GPU bitonic-sort path against its own CPU radix sort — same data, 500 to 40,000,000 elements — found radix sort winning at *every single size tested*:
 
 ![GPU bitonic vs CPU radix](docs/benchmark-gpu-vs-radix.svg)
 
 Not an implementation bug — it's algorithmic. Bitonic sort is a sorting network with O(n log²n) compare-exchange operations; radix sort is O(n). No amount of GPU parallelism closes that gap once there's enough data for it to matter. This is also how production GPU sort libraries actually work — NVIDIA's CUB/Thrust use *radix* sort as their large-array GPU primitive, not bitonic sort.
+
+### Benchmark methodology
+
+For reproducing or auditing the numbers above:
+
+| | |
+|---|---|
+| **CPU** | Apple M4 |
+| **RAM** | 16 GB |
+| **OS** | macOS 26.2 (build 25C56) |
+| **Rust** | rustc 1.96.1, cargo 1.96.1 |
+| **Compiler flags** | release profile: `opt-level = 3`, `lto = true`, `codegen-units = 1` (see [`Cargo.toml`](gsa-engine/Cargo.toml)) |
+| **Data type** | `f32` |
+| **Input distribution** | uniform random in `[-1e9, 1e9)` |
+| **Random seed** | fixed (`42`, XOR'd with `n` per size so each size gets distinct-but-reproducible data) — every run sees byte-identical input |
+| **Iterations** | 7 timed runs per size, plus 1 discarded warm-up run (absorbs page faults, allocator/rayon-pool warm-up) |
+| **Reported statistic** | median (min/max also printed by the tool) — a single sample isn't representative on a shared, unpinned machine |
+| **What's timed** | GSA: the real production code path (`SortRunStats::elapsed`, same measurement the WebSocket server reports) — not a synthetic proxy. `sort_unstable`: wall-clock around the call, no other overhead. |
+
+Reproduce it yourself:
+
+```sh
+cd gsa-engine
+cargo build --release --bench sort_bench
+./target/release/deps/sort_bench-*
+```
+
+The source (with the exact methodology as doc comments) is [`benches/sort_bench.rs`](gsa-engine/benches/sort_bench.rs). The GPU-vs-radix sweep chart above was produced the same way, at a wider range of sizes (500 to 40,000,000), via a temporary variant of the same harness that forces each strategy directly instead of letting GSA choose.
 
 ## Is "GSA" a novel sorting algorithm?
 
@@ -117,16 +145,14 @@ An earlier version of this project dispatched one GPU kernel per bitonic stage a
 
 Rather than hardcode "GPU never wins" as a conclusion from one benchmark run on one machine, `src/autotune.rs` measures both strategies — GSA's *actual* GPU sort path and its *actual* radix sort, not synthetic proxies — against a 400,000-element calibration array once at startup, and only takes the GPU path if it measures faster on the machine it's actually running on right now. If it does win, autotune also sweeps bucket-count multipliers from 0.5x to 8x the thread pool size (the GPU path's one real tuning knob — too few buckets and the CPU partition/merge phases can't spread across the thread pool, too many and per-bucket fixed costs dominate) and keeps whichever was fastest. This is the same idea autotuning libraries like FFTW and ATLAS/OpenBLAS use for their own kernels, applied here to the higher-level question of which algorithm to run at all, not just how to configure it.
 
-## Tests & benchmark
+## Tests
 
 ```sh
 cd gsa-engine
-cargo test                       # correctness: empty, single, dupes, sorted, reverse-sorted, large random (sort.rs + radix.rs)
-cargo build --release --bench sort_bench
-./target/release/deps/sort_bench-*   # GSA vs sort_unstable across sizes
+cargo test   # correctness: empty, single, dupes, sorted, reverse-sorted, large random (sort.rs + radix.rs)
 ```
 
-11/11 tests passing. Also verified over the real WebSocket protocol end-to-end at multiple sizes (500, 100K, 5M elements), all correctly sorted, with `elapsed_ms` in the `done` frame matching the standalone benchmark's numbers.
+11/11 tests passing. Also verified over the real WebSocket protocol end-to-end at multiple sizes (500, 100K, 5M elements), all correctly sorted, with `elapsed_ms` in the `done` frame matching the standalone benchmark's numbers. See [Benchmark Methodology](#benchmark-methodology) for how to reproduce the performance numbers.
 
 ## GSA Visualizer
 
