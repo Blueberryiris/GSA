@@ -1,0 +1,66 @@
+<svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="gsaBar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4fd6ff"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="500" fill="#0b0e14"/>
+  <rect x="0.5" y="0.5" width="899" height="499" fill="none" stroke="#232838"/>
+
+  <text x="40" y="38" fill="#e6e9f0" font-size="20" font-weight="700">GSA vs Rust's sort_unstable</text>
+  <text x="40" y="59" fill="#8b93a7" font-size="12.5">Apple M4 &#183; lower is better &#183; log scale (ms) &#183; real cargo bench output</text>
+
+  <!-- baseline -->
+  <line x1="70" y1="400" x2="870" y2="400" stroke="#232838" stroke-width="1"/>
+
+  <!-- legend -->
+  <rect x="600" y="20" width="12" height="12" fill="url(#gsaBar)" rx="2"/>
+  <text x="618" y="30" fill="#c7cdda" font-size="12.5">GSA</text>
+  <rect x="670" y="20" width="12" height="12" fill="#4b5468" rx="2"/>
+  <text x="688" y="30" fill="#c7cdda" font-size="12.5">sort_unstable</text>
+
+  <!-- group: n=1,000 -->
+  <text x="160" y="420" fill="#8b93a7" font-size="12.5" text-anchor="middle">1,000</text>
+  <rect x="110" y="353" width="46" height="47" fill="url(#gsaBar)" rx="3"/>
+  <text x="133" y="345" fill="#c7cdda" font-size="11" text-anchor="middle">0.024ms</text>
+  <rect x="164" y="377" width="46" height="23" fill="#4b5468" rx="3"/>
+  <text x="187" y="369" fill="#8b93a7" font-size="11" text-anchor="middle">0.012ms</text>
+  <text x="160" y="440" fill="#f87171" font-size="11.5" text-anchor="middle">0.48x (fixed dispatch cost)</text>
+
+  <!-- group: n=10,000 -->
+  <text x="320" y="420" fill="#8b93a7" font-size="12.5" text-anchor="middle">10,000</text>
+  <rect x="270" y="297" width="46" height="103" fill="url(#gsaBar)" rx="3"/>
+  <text x="293" y="289" fill="#c7cdda" font-size="11" text-anchor="middle">0.117ms</text>
+  <rect x="324" y="297" width="46" height="103" fill="#4b5468" rx="3"/>
+  <text x="347" y="289" fill="#8b93a7" font-size="11" text-anchor="middle">0.117ms</text>
+  <text x="320" y="440" fill="#facc15" font-size="11.5" text-anchor="middle">1.00x (crossover point)</text>
+
+  <!-- group: n=100,000 -->
+  <text x="480" y="420" fill="#8b93a7" font-size="12.5" text-anchor="middle">100,000</text>
+  <rect x="430" y="257" width="46" height="143" fill="url(#gsaBar)" rx="3"/>
+  <text x="453" y="249" fill="#c7cdda" font-size="11" text-anchor="middle">0.363ms</text>
+  <rect x="484" y="211" width="46" height="189" fill="#4b5468" rx="3"/>
+  <text x="507" y="203" fill="#8b93a7" font-size="11" text-anchor="middle">1.343ms</text>
+  <text x="480" y="440" fill="#4ade80" font-size="11.5" text-anchor="middle">3.70x faster</text>
+
+  <!-- group: n=1,000,000 -->
+  <text x="640" y="420" fill="#8b93a7" font-size="12.5" text-anchor="middle">1,000,000</text>
+  <rect x="590" y="188" width="46" height="212" fill="url(#gsaBar)" rx="3"/>
+  <text x="613" y="180" fill="#c7cdda" font-size="11" text-anchor="middle">2.648ms</text>
+  <rect x="644" y="130" width="46" height="270" fill="#4b5468" rx="3"/>
+  <text x="667" y="122" fill="#8b93a7" font-size="11" text-anchor="middle">13.647ms</text>
+  <text x="640" y="440" fill="#4ade80" font-size="11.5" text-anchor="middle">5.15x faster</text>
+
+  <!-- group: n=5,000,000 -->
+  <text x="800" y="420" fill="#8b93a7" font-size="12.5" text-anchor="middle">5,000,000</text>
+  <rect x="750" y="142" width="46" height="258" fill="url(#gsaBar)" rx="3"/>
+  <text x="773" y="134" fill="#c7cdda" font-size="11" text-anchor="middle">9.698ms</text>
+  <rect x="804" y="76" width="46" height="324" fill="#4b5468" rx="3"/>
+  <text x="827" y="68" fill="#8b93a7" font-size="11" text-anchor="middle">63.130ms</text>
+  <text x="800" y="440" fill="#4ade80" font-size="11.5" text-anchor="middle">6.51x faster</text>
+
+  <text x="40" y="475" fill="#565f74" font-size="11">elements sorted &#8594;</text>
+  <text x="860" y="475" fill="#565f74" font-size="11" text-anchor="end">gsa-engine / cargo bench sort_bench</text>
+</svg>

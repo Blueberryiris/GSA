@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GSA Visualizer</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #12161f;
+    --border: #232838;
+    --text: #e6e9f0;
+    --muted: #8b93a7;
+    --accent: #4fd6ff;
+    --accent2: #a78bfa;
+    --flash: #ff5f7e;
+    --ok: #4ade80;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  header h1 span { color: var(--accent); }
+  #status-pill {
+    margin-left: auto;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  #status-pill.connected { color: var(--ok); border-color: var(--ok); }
+  #status-pill.error { color: var(--bad); border-color: var(--bad); }
+  #status-pill.busy { color: var(--accent); border-color: var(--accent); }
+
+  #controls {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+  }
+  #controls label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #controls input[type="text"],
+  #controls input[type="number"] {
+    background: #0d1017;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  #controls input[type="number"] { width: 80px; }
+  #controls input[type="text"] { width: 190px; }
+
+  button {
+    background: #1a2030;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #232a3d; border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #06070a; border: none; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.08); }
+
+  #stage {
+    position: relative;
+    flex: 1;
+    padding: 16px 20px;
+    min-height: 0;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #0d1017;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 16px 20px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(13, 16, 23, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+    padding: 24px;
+  }
+  #overlay.visible { display: flex; }
+  #overlay .box { max-width: 420px; }
+  #overlay h2 { margin: 0 0 8px; font-size: 16px; color: var(--bad); }
+  #overlay p { margin: 4px 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  #overlay code {
+    background: #0d1017;
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  footer {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  footer strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GSA <span>Visualizer</span></h1>
+  <div id="status-pill">not connected</div>
+</header>
+
+<div id="controls">
+  <label>Elements
+    <input type="number" id="count" min="100" max="5000" value="600">
+  </label>
+  <button id="shuffle-btn">Shuffle</button>
+
+  <label>Engine address
+    <input type="text" id="address" placeholder="192.168.1.x:7878">
+  </label>
+  <button id="sort-btn" class="primary">Sort with GSA</button>
+</div>
+
+<div id="stage">
+  <canvas id="bars"></canvas>
+  <div id="overlay">
+    <div class="box">
+      <h2 id="overlay-title">GSA Engine not running</h2>
+      <p id="overlay-message">
+        Couldn't reach the engine. Start it on your Mac with
+        <code>./target/release/gsa-engine</code>, then enter the
+        <code>ws://&lt;LAN IP&gt;:7878</code> address it prints above and try again.
+      </p>
+      <button id="overlay-dismiss">Dismiss</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span id="footer-status">Generate an array, then connect to a running GSA Engine to sort it.</span>
+</footer>
+
+<script>
+(() => {
+  const canvas = document.getElementById('bars');
+  const ctx = canvas.getContext('2d');
+  const countInput = document.getElementById('count');
+  const addressInput = document.getElementById('address');
+  const shuffleBtn = document.getElementById('shuffle-btn');
+  const sortBtn = document.getElementById('sort-btn');
+  const statusPill = document.getElementById('status-pill');
+  const footerStatus = document.getElementById('footer-status');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const overlayDismiss = document.getElementById('overlay-dismiss');
+
+  let values = [];
+  let flashed = new Map(); // index -> timestamp of last change
+  let socket = null;
+  let maxValue = 1;
+
+  const FLASH_DURATION_MS = 260;
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor((rect.width - 32) * dpr));
+    canvas.height = Math.max(1, Math.floor((rect.height - 32) * dpr));
+    canvas.style.width = (rect.width - 32) + 'px';
+    canvas.style.height = (rect.height - 32) + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function randomArray(n) {
+    const arr = new Array(n);
+    for (let i = 0; i < n; i++) {
+      arr[i] = Math.floor(Math.random() * 1000) + 1;
+    }
+    return arr;
+  }
+
+  function shuffle() {
+    let n = parseInt(countInput.value, 10);
+    if (!Number.isFinite(n)) n = 600;
+    n = Math.max(100, Math.min(5000, n));
+    countInput.value = n;
+    values = randomArray(n);
+    maxValue = Math.max(...values);
+    flashed.clear();
+    setFooter(`Generated ${n} random values. Ready to sort.`);
+    draw();
+  }
+
+  function draw() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    if (values.length === 0) return;
+
+    const barWidth = w / values.length;
+    const now = performance.now();
+
+    for (let i = 0; i < values.length; i++) {
+      const v = values[i];
+      const barH = (v / maxValue) * (h - 8);
+      const x = i * barWidth;
+      const y = h - barH;
+
+      const flashAt = flashed.get(i);
+      let color;
+      if (flashAt !== undefined && now - flashAt < FLASH_DURATION_MS) {
+        color = getComputedStyle(document.documentElement).getPropertyValue('--flash').trim();
+      } else {
+        // gradient by height for readability
+        const t = v / maxValue;
+        const c1 = [79, 214, 255];
+        const c2 = [167, 139, 250];
+        const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+        const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+        const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+        color = `rgb(${r},${g},${b})`;
+      }
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, Math.max(1, barWidth - 1), barH);
+    }
+
+    if ([...flashed.values()].some(t => now - t < FLASH_DURATION_MS)) {
+      requestAnimationFrame(draw);
+    }
+  }
+
+  function setStatus(kind, text) {
+    statusPill.className = kind;
+    statusPill.textContent = text;
+  }
+
+  function setFooter(text) {
+    footerStatus.textContent = text;
+  }
+
+  function showOverlay(title, message) {
+    overlayTitle.textContent = title;
+    overlayMessage.innerHTML = message;
+    overlay.classList.add('visible');
+  }
+  function hideOverlay() {
+    overlay.classList.remove('visible');
+  }
+  overlayDismiss.addEventListener('click', hideOverlay);
+
+  function applyUpdate(indices, newValues) {
+    for (let i = 0; i < indices.length; i++) {
+      values[indices[i]] = newValues[i];
+      flashed.set(indices[i], performance.now());
+    }
+    draw();
+  }
+
+  function normalizeAddress(raw) {
+    let addr = raw.trim();
+    if (!addr) return null;
+    if (!addr.startsWith('ws://') && !addr.startsWith('wss://')) {
+      addr = 'ws://' + addr;
+    }
+    return addr;
+  }
+
+  function sortWithGSA() {
+    const addr = normalizeAddress(addressInput.value);
+    if (!addr) {
+      showOverlay('Enter an engine address', 'Fill in the "Engine address" field with the <code>host:port</code> printed by the GSA Engine on startup, e.g. <code>192.168.1.42:7878</code>.');
+      return;
+    }
+    if (values.length === 0) {
+      shuffle();
+    }
+
+    hideOverlay();
+    setStatus('busy', 'connecting…');
+    setFooter(`Connecting to ${addr}...`);
+    sortBtn.disabled = true;
+    shuffleBtn.disabled = true;
+
+    let opened = false;
+    let ws;
+    try {
+      ws = new WebSocket(addr);
+    } catch (e) {
+      onConnectionFailed();
+      return;
+    }
+    socket = ws;
+
+    const connectTimeout = setTimeout(() => {
+      if (!opened) {
+        ws.close();
+        onConnectionFailed();
+      }
+    }, 4000);
+
+    ws.addEventListener('open', () => {
+      opened = true;
+      clearTimeout(connectTimeout);
+      setStatus('connected', 'connected');
+      setFooter('Connected. Sending array and sorting...');
+      ws.send(JSON.stringify({ type: 'sort', array: values }));
+    });
+
+    ws.addEventListener('message', (ev) => {
+      let msg;
+      try {
+        msg = JSON.parse(ev.data);
+      } catch (e) {
+        return;
+      }
+      if (msg.type === 'progress') {
+        applyUpdate(msg.indices, msg.values);
+      } else if (msg.type === 'done') {
+        values = msg.sorted.slice();
+        maxValue = Math.max(...values, 1);
+        flashed.clear();
+        draw();
+        const sorted = values.every((v, i) => i === 0 || values[i - 1] <= v);
+        setStatus('connected', 'done');
+        const tuneNote = (msg.gpu_used && msg.bucket_multiplier)
+          ? `, autotuned bucket multiplier: ${msg.bucket_multiplier}x`
+          : '';
+        setFooter(
+          `Sorted ${msg.elements} elements in ${msg.elapsed_ms.toFixed(2)} ms ` +
+          `via ${msg.algorithm} (${msg.threads_used} threads` +
+          (msg.gpu_used ? `, GPU: ${msg.gpu_device}` : ', CPU only') +
+          `${tuneNote}). Correctness check: ${sorted ? 'PASSED' : 'FAILED'}.`
+        );
+        sortBtn.disabled = false;
+        shuffleBtn.disabled = false;
+        ws.close();
+      } else if (msg.type === 'error') {
+        setFooter('Engine error: ' + msg.message);
+        sortBtn.disabled = false;
+        shuffleBtn.disabled = false;
+      }
+    });
+
+    ws.addEventListener('error', () => {
+      if (!opened) {
+        clearTimeout(connectTimeout);
+        onConnectionFailed();
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      sortBtn.disabled = false;
+      shuffleBtn.disabled = false;
+    });
+  }
+
+  function onConnectionFailed() {
+    setStatus('error', 'connection failed');
+    setFooter('Could not reach the GSA Engine.');
+    sortBtn.disabled = false;
+    shuffleBtn.disabled = false;
+    showOverlay(
+      'GSA Engine not running',
+      'Couldn\'t open a WebSocket connection. Make sure the engine is running on your Mac ' +
+      '(<code>./target/release/gsa-engine</code>) and that you entered the address it printed, ' +
+      'e.g. <code>ws://192.168.1.42:7878</code>. If you\'re on a different device, both must be ' +
+      'on the same network, and macOS may need to grant the engine local network permission on first run.'
+    );
+  }
+
+  shuffleBtn.addEventListener('click', shuffle);
+  sortBtn.addEventListener('click', sortWithGSA);
+
+  resizeCanvas();
+  shuffle();
+})();
+</script>
+
+</body>
+</html>
