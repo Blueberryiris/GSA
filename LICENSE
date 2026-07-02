@@ -1,4 +1,4 @@
-MIT License
+MIT License with Attribution Requirement
 
 Copyright (c) 2026 boostwee-ai
 
@@ -9,8 +9,21 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Notice. The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+
+2. Attribution. Any distribution, deployment, or public-facing use of the
+   Software or a derivative work of it — including but not limited to hosted
+   services, applications, websites, or products that use, incorporate, or
+   are built on the Software, whether or not the Software has been modified —
+   must include clear and visible attribution to the original author,
+   credited as "boostwee-ai" with a link to
+   https://github.com/boostwee-ai/GSA, displayed in a location reasonably
+   accessible to end users of that distribution, deployment, or use (for
+   example: an About page, credits/acknowledgments screen, documentation, or
+   footer). A mention buried only in source code comments or a LICENSE file
+   does not satisfy this requirement on its own if the Software is used in a
+   context that has a user-facing interface.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

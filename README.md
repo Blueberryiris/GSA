@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/Rust-2021-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Apple%20Silicon-000000?logo=apple&logoColor=white)](#)
 [![Metal](https://img.shields.io/badge/GPU-Metal-blue?logo=apple&logoColor=white)](#)
-[![License: MIT](https://img.shields.io/badge/license-MIT-4fd6ff.svg)](LICENSE)
+[![License: MIT + Attribution](https://img.shields.io/badge/license-MIT%20%2B%20Attribution-4fd6ff.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-4ade80)](#tests)
 
 <img src="docs/hero.svg" alt="GSA Visualizer — before (shuffled) and after (sorted) via the live WebSocket protocol" width="100%">
@@ -204,4 +204,4 @@ GSA/
 
 ## License
 
-[MIT](LICENSE)
+[MIT License with Attribution Requirement](LICENSE) — permissive (use, modify, distribute, commercial use all fine), but any public-facing use or distribution must visibly credit **boostwee-ai** with a link to this repo, somewhere users would actually see it (About page, credits screen, footer, docs) — not just buried in a source comment.
